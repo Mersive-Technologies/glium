@@ -36,7 +36,7 @@ fn main() {
 
         "#).unwrap();
 
-    const NUM_VALUES: usize = 4096;
+    const NUM_VALUES: usize = 1024;
 
     #[repr(C)]
     #[derive(Clone, Copy)]

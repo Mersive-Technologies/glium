@@ -7,16 +7,20 @@ mod support;
 use glium::{glutin, Surface};
 use glium::index::PrimitiveType;
 use crate::glutin::dpi::PhysicalSize;
+use glutin::platform::unix::HeadlessContextExt;
 
 fn main() {
     let event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new();
 
-    let cb = glutin::ContextBuilder::new();
+    // let wb = glutin::window::WindowBuilder::new();
+    // let cb = glutin::ContextBuilder::new();
+    // let display = glium::Display::new(wb, cb, &event_loop).unwrap();
+
     let size = PhysicalSize {
         width: 800,
         height: 600,
     };
+    let cb = glutin::ContextBuilder::new();
     let context = cb.build_headless(&event_loop, size).unwrap();
     let context = unsafe {
         context.treat_as_current()
@@ -160,6 +164,33 @@ fn main() {
     };
 
     // Draw the triangle to the screen.
-    draw();
+    // draw();
 
+    let mut first = true;
+    event_loop.run(move |event, _, control_flow| {
+        *control_flow = {
+            println!("{:?}", event);
+            if first {
+                println!("draw!");
+                draw();
+                first = false;
+            }
+            match event {
+                glutin::event::Event::WindowEvent { event, .. } => {
+                    match event {
+                        // Break from the main loop when the window is closed.
+                        glutin::event::WindowEvent::CloseRequested => glutin::event_loop::ControlFlow::Exit,
+                        // Redraw the triangle when the window is resized.
+                        glutin::event::WindowEvent::Resized(..) => {
+                            println!("Resize!");
+                            draw();
+                            glutin::event_loop::ControlFlow::Poll
+                        },
+                        _ => glutin::event_loop::ControlFlow::Poll,
+                    }
+                },
+                _ => glutin::event_loop::ControlFlow::Poll,
+            }
+        }
+    });
 }
