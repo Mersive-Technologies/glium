@@ -6,12 +6,22 @@ mod support;
 #[allow(unused_imports)]
 use glium::{glutin, Surface};
 use glium::index::PrimitiveType;
+use crate::glutin::dpi::PhysicalSize;
 
 fn main() {
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new();
+
     let cb = glutin::ContextBuilder::new();
-    let display = glium::Display::new(wb, cb, &event_loop).unwrap();
+    let size = PhysicalSize {
+        width: 800,
+        height: 600,
+    };
+    let context = cb.build_headless(&event_loop, size).unwrap();
+    let context = unsafe {
+        context.treat_as_current()
+    };
+    let display = glium::backend::glutin::headless::Headless::new(context).unwrap();
 
     // building the vertex buffer, which contains all the vertices that we will draw
     let vertex_buffer = {
@@ -139,28 +149,17 @@ fn main() {
 
         // drawing a frame
         let mut target = display.draw();
-        target.clear_color(0.0, 0.0, 0.0, 0.0);
+        target.clear_color(1.0, 0.0, 0.0, 1.0);
         target.draw(&vertex_buffer, &index_buffer, &program, &uniforms, &Default::default()).unwrap();
         target.finish().unwrap();
+
+        let image: glium::texture::RawImage2d<'_, u8> = display.read_front_buffer().unwrap();
+        let image = image::ImageBuffer::from_raw(image.width, image.height, image.data.into_owned()).unwrap();
+        let image = image::DynamicImage::ImageRgba8(image).flipv();
+        image.save("glium-example-screenshot.png").unwrap();
     };
 
     // Draw the triangle to the screen.
     draw();
 
-    // the main loop
-    event_loop.run(move |event, _, control_flow| {
-        *control_flow = match event {
-            glutin::event::Event::WindowEvent { event, .. } => match event {
-                // Break from the main loop when the window is closed.
-                glutin::event::WindowEvent::CloseRequested => glutin::event_loop::ControlFlow::Exit,
-                // Redraw the triangle when the window is resized.
-                glutin::event::WindowEvent::Resized(..) => {
-                    draw();
-                    glutin::event_loop::ControlFlow::Poll
-                },
-                _ => glutin::event_loop::ControlFlow::Poll,
-            },
-            _ => glutin::event_loop::ControlFlow::Poll,
-        };
-    });
 }
